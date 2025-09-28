@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>加湿器</title>
+    <style>
+        *{
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+        .top>div{
+            width: 50vw;
+            text-align: center;
+        }
+        .top>div :nth-child(1){
+            font-size: small;
+            color: #666;
+            margin-top: 10px;
+        }
+        .top>div :nth-child(2){
+            font-size: larger;
+            color: #333;
+        }
+        .img :nth-child(1){
+            margin-top: 10vw;
+            width: 5vw;
+            height: 2vw;
+            background-color: #b2e8ff;
+            margin-left: 60vw;
+        }
+        .img :nth-child(2){
+            margin-top: 2px;
+            width: 50vw;
+            height: 18vw;
+            background-color: #d2e8ff;
+            border-radius: 20% 20% 0 0;
+            margin-left: 25vw;
+        }
+        .img :nth-child(3){
+            margin-top: 5px;
+            width: 50vw;
+            height: 30vw;
+            background-color: #d2e8ff;
+            border-radius: 0 0 5% 5%;
+            margin-left: 25vw;
+        }
+        .state td:nth-child(1){
+            font-size: small;
+            font-weight: 700; 
+        }
+        .state tr:nth-child(2n){
+            background-color: #f9f9f9;
+        }
+        .state td{
+            font-size: small;
+            width: calc(50vw - 10px);
+            padding-left: 10px;
+            height: 25px;
+        }
+        button{
+            width: 100px;
+            height: 30px;
+            background-color: #ffffff;
+            border-width: 1px;
+            box-shadow: 2px 2px 1px #ddd ,1px 1px 1px inset #eee ;
+        }
+    </style>
+</head>
+<body>
+    <div class="top" style="display: flex;box-shadow: 0px 1px 5px #eee;">
+        <div>
+            <p>湿度</p>
+            <p id="humi_">25%</p>
+        </div>
+        <div>
+            <p>温度</p>
+            <p id="temp_">30℃</p>
+        </div>
+    </div>
+    <div class="img" style="width: 100vw; height: 60vw;">
+        <div></div>
+        <div></div>
+        <div></div>
+    </div>
+    <div class="state" style="display: flex; justify-content: center; margin: 30px 10px 10px 10px; border: 1px solid #666;">
+       <table>
+        <tr><td>工作状态</td><td id="state_">-</td></tr>
+        <tr><td>工作模式</td><td id="mode_">-</td></tr>
+        <tr><td>加湿状态</td><td id="pwm_">-</td></tr>
+        <tr><td>传感器状态</td><td id="dht11_">-</td></tr>
+        <tr id="dht11ErrTr"><td>传感器错误信息</td><td id="dht11ErrStr_">-</td></tr>
+        <tr><td>LED状态</td><td id="led_">-</td></tr>
+        <tr><td>工作时长</td><td id="workTime_">-</td></tr>
+        <tr><td>当前模式时长</td><td id="modeTime_">-</td></tr>
+       </table>
+    </div>
+    <div class="control" >
+        <div class="mode" style="display: flex;justify-content: space-between; margin: 0 10px 0px 10px;">
+            <select name="mode" id="modeSelect" style="width: 120px; height: 30px;">
+                <option value="free">空闲模式</option>
+                <option value="time_30_min">定时半小时</option>
+                <option value="time_60_min">定时一小时</option>
+                <option value="auto">自动</option>
+            </select>
+            <button id="modeBtn" onclick="modeUpdate()">修改模式</button>
+            <button id="ledBtn" onclick="ledUpdate()">开启LED</button>
+        </div>
+    </div>
+</body>
+<script>
+
+var device={ workTime:0,modeTime:0 };
+const state2Str={
+    'work':'正常工作',
+    'no_water':'缺水',
+    'err':'出错',
+};
+const mode2Str={
+    'free':"空闲状态",
+    'time_30_min':"定时-30分钟",
+    'time_60_min':"定时-60分钟",
+    'auto':"自动",
+};
+
+let time=0;
+setInterval(()=>{
+    device.workTime ++;
+    device.modeTime ++;
+    dataDisplay();
+    if(time % 3==0){
+        getState();
+    }
+    time++;
+},1000);
+
+function time2Str(s){
+    let min=Math.floor(s/60);
+    if(min==0) return s + 's';
+    let h=Math.floor(min/60);
+    if(h==0) return min + 'min ' + s%60 + 's';
+    return h+ 'h ' + min%60 +'min ' + s%60 + 's'; 
+    
+}
+
+
+function dataDisplay(){
+    const {humi,temp,led,dht11,pwm,dht11ErrStr,state,mode,modeTime,workTime}=device;
+    humi_.innerHTML=humi + '%';
+    temp_.innerHTML=temp + '℃';
+    led_.innerHTML=led==1?"开":"关";
+    dht11_.innerHTML=dht11=='1'?"正常":"出错";
+    pwm_.innerHTML=pwm=='1'?"加湿中":"暂停加湿";
+    dht11ErrTr.style.display=(dht11=='1')?"none":"table-row";
+    dht11ErrStr_.innerHTML=(dht11=='0')?dht11ErrStr:"正常工作";
+    state_.innerHTML=state2Str[state];
+    mode_.innerHTML=mode2Str[mode];
+    modeTime_.innerHTML=time2Str(modeTime) ;
+    workTime_.innerHTML=time2Str(workTime) ;
+    ledBtn.innerHTML=led==1?"关闭LED":"开启LED";
+}
+
+
+
+function getState(){
+    fetch('/state')
+    .then(async (res)=>{
+        let text=await  res.text();
+        let arr=text.split(" \n ");
+        console.log(arr);
+        arr.forEach((str)=>{
+            let [name,value]=str.split(':');
+            device[name]=value;
+        });
+        dataDisplay();
+    } )
+}
+
+
+
+function modeUpdate(){
+    if(modeSelect.value==device.mode){
+        alert("已经在这个模式工作了");
+        return;
+    };
+    const formData=new URLSearchParams();
+    formData.append('mode',modeSelect.value);
+    fetch('/mode/update', {
+      method: 'POST',
+      body: formData,
+    }).then(async (res)=>{
+        let text=await res.text();
+        console.log(text);
+        if(text=='true'){
+            device.mode=modeSelect.value;
+            dataDisplay();
+        }else{
+            alert("切换模式失败");
+        }
+    } )
+}
+function ledUpdate(){
+    console.log('/led/'+(device.led=='1'?"off":"on"));
+    fetch('/led/'+(device.led=='1'?"off":"on"), {
+      method: 'POST',
+    }).then(async (res)=>{
+        let text=await res.text();
+        if(text=='true'){
+            device.led=Number.parseInt(device.led)*(-1) + 1;
+            dataDisplay();
+        }else{
+            alert( device.led?"关闭":"开启" +"LED失败");
+        }
+    } )
+}
+
+</script>
+</html>
