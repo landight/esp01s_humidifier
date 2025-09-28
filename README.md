@@ -31,4 +31,4 @@
 
 <img src="/docs/img/网页截图_缺水.jpg" />
 
-<img src="/docs/img/网页截图_传感器异常.jpg.jpg" />
+<img src="/docs/img/网页截图_传感器异常.jpg" />
